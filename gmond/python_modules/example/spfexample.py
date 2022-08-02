@@ -33,7 +33,7 @@
 import random
 import time
 
-descriptors = list()
+descriptors = []
 
 # This is a list of bogus hosts that this module will report
 #  through the spoofing functionality.  Normally a spoofing
@@ -76,18 +76,11 @@ def Random_Numbers(name):
 
 def Init_Metric(spfHost, name, tmax, metrictype, units, slope, fmt, desc, metricAlias, ipAddr, handler):
     '''Create a metric definition dictionary object for an imaginary box.'''
-    metric_name = name + ':' + spfHost
-    spoofHost = ipAddr + ':' + spfHost
+    metric_name = f'{name}:{spfHost}'
+    spoofHost = f'{ipAddr}:{spfHost}'
 
-    # name - Should result in a unique metric indentifier. Attaching the spoofed host name
-    #          allows the same metric name to be reused while the resulting name is unique.
-    # spoof_host - Must follow the same format as gmetric. The format should be the IP and
-    #          host name separated by a colon.
-    # spoof_name - Must be the original name of the metric that this definition will be spoofing.
-    #          In other words, if this metric name is spf_boottime, the spoof_name would be
-    #          boottime if this metric is meant to spoof the original boottime metric.
-
-    d = {'name': metric_name,
+    return {
+        'name': metric_name,
         'call_back': handler,
         'time_max': tmax,
         'value_type': metrictype,
@@ -96,9 +89,8 @@ def Init_Metric(spfHost, name, tmax, metrictype, units, slope, fmt, desc, metric
         'format': fmt,
         'description': desc,
         'spoof_host': spoofHost,
-        'spoof_name': metricAlias}
-
-    return d
+        'spoof_name': metricAlias,
+    }
 
 
 def metric_init(params):
@@ -108,16 +100,86 @@ def metric_init(params):
     random.seed()
 
     for metric_name, ipaddr in spoofHosts:
-        descriptors.append(Init_Metric(metric_name, 'spf_random_cpu_util', int(90),
-                'uint', '%', 'both', '%u',  'Spoofed CPU Utilization', 'cpu_util', ipaddr, Random_Numbers))
-        descriptors.append(Init_Metric(metric_name, 'spf_heartbeat', int(20),
-                'uint', '', '', '%u',  'Spoofed Heartbeat', 'heartbeat', ipaddr, spf_heartbeat))
-        descriptors.append(Init_Metric(metric_name, 'spf_location', int(1200),
-                'string', '(x,y,z)', '', '%s',  'Spoofed Location', 'location', ipaddr, spf_location))
-        descriptors.append(Init_Metric(metric_name, 'spf_boottime', int(1200),
-                'uint', 's', 'zero', '%u',  'Spoofed Boot Time', 'boottime', ipaddr, spf_boottime))
-        descriptors.append(Init_Metric(metric_name, 'spf_osname', int(1200),
-                'string', '', 'zero', '%s',  'Spoofed Operating System Name', 'os_name', ipaddr, spf_osname))
+        descriptors.append(
+            Init_Metric(
+                metric_name,
+                'spf_random_cpu_util',
+                90,
+                'uint',
+                '%',
+                'both',
+                '%u',
+                'Spoofed CPU Utilization',
+                'cpu_util',
+                ipaddr,
+                Random_Numbers,
+            )
+        )
+
+        descriptors.append(
+            Init_Metric(
+                metric_name,
+                'spf_heartbeat',
+                20,
+                'uint',
+                '',
+                '',
+                '%u',
+                'Spoofed Heartbeat',
+                'heartbeat',
+                ipaddr,
+                spf_heartbeat,
+            )
+        )
+
+        descriptors.append(
+            Init_Metric(
+                metric_name,
+                'spf_location',
+                1200,
+                'string',
+                '(x,y,z)',
+                '',
+                '%s',
+                'Spoofed Location',
+                'location',
+                ipaddr,
+                spf_location,
+            )
+        )
+
+        descriptors.append(
+            Init_Metric(
+                metric_name,
+                'spf_boottime',
+                1200,
+                'uint',
+                's',
+                'zero',
+                '%u',
+                'Spoofed Boot Time',
+                'boottime',
+                ipaddr,
+                spf_boottime,
+            )
+        )
+
+        descriptors.append(
+            Init_Metric(
+                metric_name,
+                'spf_osname',
+                1200,
+                'string',
+                '',
+                'zero',
+                '%s',
+                'Spoofed Operating System Name',
+                'os_name',
+                ipaddr,
+                spf_osname,
+            )
+        )
+
 
     return descriptors
 

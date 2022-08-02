@@ -34,7 +34,7 @@ import statvfs
 import os
 import ganglia
 
-descriptors = list()
+descriptors = []
 
 
 def Find_Metric(name):
@@ -43,7 +43,6 @@ def Find_Metric(name):
     for d in descriptors:
         if d['name'] == name:
             return d
-    pass
 
 
 def Remote_Mount(device, type):
@@ -64,8 +63,7 @@ def DiskTotal_Handler(name):
     st = os.statvfs(d['mount'])
     size = st[statvfs.F_BLOCKS]
     blocksize = st[statvfs.F_BSIZE]
-    vv = (size * blocksize) / 1e9
-    return vv
+    return (size * blocksize) / 1e9
 
 
 def DiskUsed_Handler(name):
@@ -77,9 +75,7 @@ def DiskUsed_Handler(name):
 
     st = os.statvfs(d['mount'])
     free = st[statvfs.F_BAVAIL]
-    size = st[statvfs.F_BLOCKS]
-
-    if size:
+    if size := st[statvfs.F_BLOCKS]:
         return ((size - free) / float(size)) * 100
     else:
         return float(0)
@@ -87,9 +83,10 @@ def DiskUsed_Handler(name):
 
 def Init_Metric(line, name, tmax, type, units, slope, fmt, desc, handler):
     '''Create a metric definition dictionary object for a device.'''
-    metric_name = line[0] + '-' + name
+    metric_name = f'{line[0]}-{name}'
 
-    d = {'name': metric_name.replace('/', '-').lstrip('-'),
+    return {
+        'name': metric_name.replace('/', '-').lstrip('-'),
         'call_back': handler,
         'time_max': tmax,
         'value_type': type,
@@ -98,8 +95,8 @@ def Init_Metric(line, name, tmax, type, units, slope, fmt, desc, handler):
         'format': fmt,
         'description': desc,
         'groups': 'disk',
-        'mount': line[1]}
-    return d
+        'mount': line[1],
+    }
 
 
 def metric_init(params):

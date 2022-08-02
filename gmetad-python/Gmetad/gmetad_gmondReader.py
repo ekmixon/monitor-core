@@ -57,8 +57,8 @@ class GmondContentHandler(xml.sax.ContentHandler):
         ds = DataStore()
         # Create a new node based on the XML attributes.
         e = Element(tag, attrs)
-        # If this is the head tag for the XML dump, initialize the data store 
-        if 'GANGLIA_XML' == tag:
+        # If this is the head tag for the XML dump, initialize the data store
+        if tag == 'GANGLIA_XML':
             ds.acquireLock(self)
             self._elemStack.append(ds.getNode()) # Fetch the root node.  It has already been set into the tree.
             self._elemStackLen += 1
@@ -70,7 +70,7 @@ class GmondContentHandler(xml.sax.ContentHandler):
         self._elemStack.append(ds.setNode(e, self._elemStack[self._elemStackLen-1]))
         # If this is a cluster or nested grid node, then keep track of the data store path to this node.
         if (len(self._ancestry) < 2 or (len(self._ancestry) == 2 and e.id in ['GRID', 'CLUSTER'])):
-            self._ancestry.append('%s:%s'%(e.id,e.getAttr('name')))
+            self._ancestry.append(f"{e.id}:{e.getAttr('name')}")
         self._elemStackLen += 1
         
     def endElement(self, tag):
@@ -93,7 +93,7 @@ class GmondReader(threading.Thread):
         self._shuttingDown = False
         self.dataSource = dataSource
         self.lastKnownGoodHost = 0
-        logging.debug('Reader created for cluster %s' % self.dataSource.name)
+        logging.debug(f'Reader created for cluster {self.dataSource.name}')
         
     def _getEndpoint(self, hostspec, port=8649):
         hostinfo = hostspec.split(':')
@@ -127,18 +127,20 @@ class GmondReader(threading.Thread):
                     except socket.error:
                         pass
             if connected:
-                logging.info('Querying data source %s via host %s' % (self.dataSource.name, self.dataSource.hosts[self.lastKnownGoodHost]))
+                logging.info(
+                    f'Querying data source {self.dataSource.name} via host {self.dataSource.hosts[self.lastKnownGoodHost]}'
+                )
+
                 xmlbuf = ''
                 while True:
-                    # Read all of the XML data from the data source.
-                    buf = sock.recv(8192)
-                    if not buf:
+                    if buf := sock.recv(8192):
+                        xmlbuf += buf
+                    else:
                         break
-                    xmlbuf += buf
                 sock.close()
 
                 # These are the gzip header magic numbers, per RFC 1952 section 2.3.1
-                if xmlbuf[0:2] == '\x1f\x8b':
+                if xmlbuf[:2] == '\x1f\x8b':
                     # 32 is a magic number in zlib.h for autodetecting the zlib or gzip header
                     xmlbuf = zlib.decompress(xmlbuf, zlib.MAX_WBITS + 32)
 
@@ -150,7 +152,10 @@ class GmondReader(threading.Thread):
                 if clusterNode is not None:
                     clusterNode.setAttr('status', 'up')
             else:
-                logging.error('Could not connect to any host for data source %s' % self.dataSource.name)
+                logging.error(
+                    f'Could not connect to any host for data source {self.dataSource.name}'
+                )
+
                 ds = DataStore()
                 cfg = getConfig()
                 gridKey = Element.generateKey(['GRID',cfg[GmetadConfig.GRIDNAME]])
@@ -166,9 +171,9 @@ class GmondReader(threading.Thread):
                 if clusterNode is not None:
                     clusterNode.setAttr('status', 'down')
                     #clusterNode.localtime = time.time()
-                    
+
             ds.updateFinished(clusterNode)
-                    
+
             if self._shuttingDown:
                 break
             # Go to sleep for a while.

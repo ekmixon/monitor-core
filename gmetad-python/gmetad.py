@@ -54,20 +54,17 @@ class GmetadListenSocket(asyncore.dispatcher):
     def open(self, port, interface=''):
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
-        host = 'localhost'
-        if 0 < len(interface.strip()):
-            host = interface
+        host = interface if len(interface.strip()) > 0 else 'localhost'
         logging.info('Opening query interface on %s:%d' % (host, port))
         self.bind((interface,port))
         self.listen(5)
         
     def _connIsAllowedFrom(self, remoteHost):
         cfg = getConfig()
-        if '127.0.0.1' == remoteHost: return True
-        if 'localhost' == remoteHost: return True
+        if remoteHost == '127.0.0.1': return True
+        if remoteHost == 'localhost': return True
         if cfg[GmetadConfig.ALL_TRUSTED]: return True
-        trustedHosts = cfg[GmetadConfig.TRUSTED_HOSTS]
-        if trustedHosts:
+        if trustedHosts := cfg[GmetadConfig.TRUSTED_HOSTS]:
             if trustedHosts.count(remoteHost): return True
             hostname, aliases, ips = socket.gethostbyaddr(remoteHost)
             if trustedHosts.count(hostname): return True
@@ -81,22 +78,22 @@ class XmlSocket(GmetadListenSocket):
     def handle_accept(self):
         newsock, addr = self.accept()
         if self._connIsAllowedFrom(addr[0]):
-            logging.debug('Replying to XML dump query from %s' % addr[0])
+            logging.debug(f'Replying to XML dump query from {addr[0]}')
             writer = XmlWriter()
             newsock.sendall(writer.getXml())
             newsock.close()
         else:
-            logging.info('XML dump query from %s rejected by rule' % addr[0])
+            logging.info(f'XML dump query from {addr[0]} rejected by rule')
 
 
 class InteractiveSocket(GmetadListenSocket):        
     def handle_accept(self):
         newsock, addr = self.accept()
         if self._connIsAllowedFrom(addr[0]):
-            logging.debug('Replying to interactive query from %s' % addr[0])
+            logging.debug(f'Replying to interactive query from {addr[0]}')
             InteractiveConnectionHandler(newsock)
         else:
-            logging.info('Interactive query from %s rejected by rule' % addr[0])
+            logging.info(f'Interactive query from {addr[0]} rejected by rule')
         
 class InteractiveConnectionHandler(asyncore.dispatcher_with_send):
     ''' This class handles the interactive gmetad ports.'''
@@ -109,25 +106,25 @@ class InteractiveConnectionHandler(asyncore.dispatcher_with_send):
         return self.amt_to_write
         
     def handle_read(self):
-        rbuf = self.recv(1024)
-        if rbuf:
-            rbuf = rbuf.strip().strip('/')
-            if 0 == len(rbuf):
-                rbuf = None
-            queryargs = None
-            if rbuf is not None and -1 != rbuf.find('?'):
-                queryargs = {}
-                try:
-                    rbuf, query = rbuf.split('?')
-                    query = query.split('&')
-                    for q in query:
-                        k,v = q.split('=')
-                        queryargs[k] = v
-                except ValueError:
-                    pass
-            writer = XmlWriter()
-            self.buffer = writer.getXml(rbuf, queryargs)
-            self.amt_to_write = len(self.buffer)
+        if not (rbuf := self.recv(1024)):
+            return
+        rbuf = rbuf.strip().strip('/')
+        if len(rbuf) == 0:
+            rbuf = None
+        queryargs = None
+        if rbuf is not None and rbuf.find('?') != -1:
+            queryargs = {}
+            try:
+                rbuf, query = rbuf.split('?')
+                query = query.split('&')
+                for q in query:
+                    k,v = q.split('=')
+                    queryargs[k] = v
+            except ValueError:
+                pass
+        writer = XmlWriter()
+        self.buffer = writer.getXml(rbuf, queryargs)
+        self.amt_to_write = len(self.buffer)
         
     def handle_write(self):
         sent = self.socket.send(self.buffer)
@@ -146,8 +143,7 @@ def getLoggingLevel(lspec):
     try:
         return levelMap[lspec]
     except KeyError:
-        if lspec < 0: return logging.FATAL
-        return logging.DEBUG
+        return logging.FATAL if lspec < 0 else logging.DEBUG
 
 if __name__ == '__main__':
     # Read and store the configuration

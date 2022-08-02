@@ -334,7 +334,7 @@ def update_stats(get_innodb=True, get_master=True, get_slave=True):
 
 
 def get_stat(name):
-    logging.info("getting stat: %s" % name)
+    logging.info(f"getting stat: {name}")
     global mysql_stats
     #logging.debug(mysql_stats)
 
@@ -342,21 +342,14 @@ def get_stat(name):
     global REPORT_MASTER
     global REPORT_SLAVE
 
-    ret = update_stats(REPORT_INNODB, REPORT_MASTER, REPORT_SLAVE)
-
-    if ret:
-        if name.startswith('mysql_'):
-            label = name[6:]
-        else:
-            label = name
-
-        logging.debug("fetching %s" % name)
-        try:
-            return mysql_stats[label]
-        except:
-            logging.error("failed to fetch %s" % name)
-            return 0
-    else:
+    if not (ret := update_stats(REPORT_INNODB, REPORT_MASTER, REPORT_SLAVE)):
+        return 0
+    label = name[6:] if name.startswith('mysql_') else name
+    logging.debug(f"fetching {name}")
+    try:
+        return mysql_stats[label]
+    except:
+        logging.error(f"failed to fetch {name}")
         return 0
 
 def metric_init(params):
@@ -373,7 +366,7 @@ def metric_init(params):
     REPORT_MASTER = str(params.get('get_master', True)) == "True"
     REPORT_SLAVE = str(params.get('get_slave', True)) == "True"
 
-    logging.debug("init: " + str(params))
+    logging.debug(f"init: {str(params)}")
 
     mysql_conn_opts = dict(
         host = params.get('host', 'localhost'),
@@ -1099,28 +1092,31 @@ def metric_init(params):
         for label in stats_descriptions:
             if mysql_stats.has_key(label):
                 format = '%u'
-                if stats_descriptions[label].has_key('value_type'):
-                    if stats_descriptions[label]['value_type'] == "float":
-                        format = '%f'
+                if (
+                    stats_descriptions[label].has_key('value_type')
+                    and stats_descriptions[label]['value_type'] == "float"
+                ):
+                    format = '%f'
 
                 d = {
-                    'name': 'mysql_' + label,
+                    'name': f'mysql_{label}',
                     'call_back': get_stat,
                     'time_max': 60,
                     'value_type': "uint",
                     'units': "",
                     'slope': "both",
                     'format': format,
-                    'description': "http://search.mysql.com/search?q=" + label,
+                    'description': f"http://search.mysql.com/search?q={label}",
                     'groups': 'mysql',
                 }
 
-                d.update(stats_descriptions[label])
+
+                d |= stats_descriptions[label]
 
                 descriptors.append(d)
 
             else:
-                logging.error("skipped " + label)
+                logging.error(f"skipped {label}")
 
     #logging.debug(str(descriptors))
     return descriptors

@@ -21,7 +21,7 @@ import libvirt
 import os
 import time
 
-descriptors = list()
+descriptors = []
 conn        = libvirt.openReadOnly("xen:///")
 conn_info   = conn.getInfo()
 
@@ -30,9 +30,7 @@ def xen_vms(name):
     '''Return number of virtual is running'''
     global conn
 
-    vm_count = conn.numOfDomains()
-
-    return vm_count
+    return conn.numOfDomains()
 
 
 def xen_mem(name):
@@ -121,7 +119,6 @@ def metric_cleanup():
     '''Clean up the metric module.'''
     global conn
     conn.close()
-    pass
 
 #This code is for debugging and unit testing
 if __name__ == '__main__':

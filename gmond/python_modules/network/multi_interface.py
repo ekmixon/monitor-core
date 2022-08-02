@@ -104,47 +104,95 @@ def metric_init(params):
         }
 
     for dev in INTERFACES:
-        descriptors.append(create_desc(Desc_Skel, {
-                    "name"        : "rx_bytes_" + dev,
-                    "units"       : "bytes/sec",
-                    "description" : "received bytes per sec",
-                    }))
-        descriptors.append(create_desc(Desc_Skel, {
-                    "name"        : "rx_pkts_" + dev,
-                    "units"       : "pkts/sec",
-                    "description" : "received packets per sec",
-                    }))
-        descriptors.append(create_desc(Desc_Skel, {
-                    "name"        : "rx_errs_" + dev,
-                    "units"       : "pkts/sec",
-                    "description" : "received error packets per sec",
-                    }))
-        descriptors.append(create_desc(Desc_Skel, {
-                    "name"        : "rx_drops_" + dev,
-                    "units"       : "pkts/sec",
-                    "description" : "receive packets dropped per sec",
-                    }))
+        descriptors.append(
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": f"rx_bytes_{dev}",
+                    "units": "bytes/sec",
+                    "description": "received bytes per sec",
+                },
+            )
+        )
 
-        descriptors.append(create_desc(Desc_Skel, {
-                    "name"        : "tx_bytes_" + dev,
-                    "units"       : "bytes/sec",
-                    "description" : "transmitted bytes per sec",
-                    }))
-        descriptors.append(create_desc(Desc_Skel, {
-                    "name"        : "tx_pkts_" + dev,
-                    "units"       : "pkts/sec",
-                    "description" : "transmitted packets per sec",
-                    }))
-        descriptors.append(create_desc(Desc_Skel, {
-                    "name"        : "tx_errs_" + dev,
-                    "units"       : "pkts/sec",
-                    "description" : "transmitted error packets per sec",
-                    }))
-        descriptors.append(create_desc(Desc_Skel, {
-                    "name"        : "tx_drops_" + dev,
-                    "units"       : "pkts/sec",
-                    "description" : "transmitted dropped packets per sec",
-                    }))
+        descriptors.append(
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": f"rx_pkts_{dev}",
+                    "units": "pkts/sec",
+                    "description": "received packets per sec",
+                },
+            )
+        )
+
+        descriptors.append(
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": f"rx_errs_{dev}",
+                    "units": "pkts/sec",
+                    "description": "received error packets per sec",
+                },
+            )
+        )
+
+        descriptors.append(
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": f"rx_drops_{dev}",
+                    "units": "pkts/sec",
+                    "description": "receive packets dropped per sec",
+                },
+            )
+        )
+
+
+        descriptors.append(
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": f"tx_bytes_{dev}",
+                    "units": "bytes/sec",
+                    "description": "transmitted bytes per sec",
+                },
+            )
+        )
+
+        descriptors.append(
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": f"tx_pkts_{dev}",
+                    "units": "pkts/sec",
+                    "description": "transmitted packets per sec",
+                },
+            )
+        )
+
+        descriptors.append(
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": f"tx_errs_{dev}",
+                    "units": "pkts/sec",
+                    "description": "transmitted error packets per sec",
+                },
+            )
+        )
+
+        descriptors.append(
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": f"tx_drops_{dev}",
+                    "units": "pkts/sec",
+                    "description": "transmitted dropped packets per sec",
+                },
+            )
+        )
+
 
     if params['send_aggregate_bytes_packets']:
         descriptors.append(create_desc(Desc_Skel, {

@@ -18,7 +18,7 @@ class GParser:
     p.StartElementHandler = parser.start_element
     p.EndElementHandler = parser.end_element
     p.ParseFile(file)
-    if self.value == None:
+    if self.value is None:
       raise Exception('Host/value not found')
     return float(self.value)
 

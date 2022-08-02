@@ -133,7 +133,7 @@ def metric_init(params={}):
             "description": "http://code.google.com/p/redis/wiki/InfoCommand",
             "groups": "redis",
         }
-        descriptor.update(updates)
+        descriptor |= updates
         metric_handler.descriptors[name] = descriptor
     return metric_handler.descriptors.values()
 

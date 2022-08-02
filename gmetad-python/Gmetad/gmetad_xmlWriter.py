@@ -129,7 +129,7 @@ class XmlWriter:
         if self.gridDepth == 0:
             # Generate the XML for each cluster/grid node.
             for c in gridnode.children.values():
-                if 'CLUSTER' == c.id or 'GRID' == c.id:
+                if c.id in ['CLUSTER', 'GRID']:
                     rbuf += self._getXmlImpl(c, filterList, queryargs)
         return rbuf
         
@@ -143,9 +143,11 @@ class XmlWriter:
         if summaryData is not None:
             for m in summaryData['summary'].itervalues():
                 cbuf += self._getXmlImpl(m, filterList, queryargs)
-        # Format the XML based on all of the results.
-        rbuf = '<HOSTS UP="%d" DOWN="%d" SOURCE="gmetad" />\n%s' % (hosts[0], hosts[1], cbuf)
-        return rbuf
+        return '<HOSTS UP="%d" DOWN="%d" SOURCE="gmetad" />\n%s' % (
+            hosts[0],
+            hosts[1],
+            cbuf,
+        )
         
     def _getXmlImpl(self, element, filterList=None, queryargs=None):
         ''' This method can be called recursively to traverse the data store and produce XML
@@ -155,39 +157,57 @@ class XmlWriter:
         if element.id in ['CLUSTER', 'HOST', 'EXTRA_DATA', 'EXTRA_ELEMENT'] and self.gridDepth > 0:
             skipTag = True
         # If this is a grid tag, then get the local time since a time stamp was never provided by gmond.
-        if 'GRID' == element.id:
+        if element.id == 'GRID':
             element.setAttr('localtime', int(time.time()))
             self.gridDepth += 1
             logging.info('Found <GRID> depth is now: %d' %self.gridDepth)
         if not skipTag:
             # Add the XML tag
-            rbuf = '<%s' % element.tag
+            rbuf = f'<{element.tag}'
             # Add each attribute that is contained in the.  By pass some specific attributes.
             for k,v in element.getAttrs().items():
                 rbuf += ' %s="%s"' % (k.upper(), v)
-        if queryargs is not None or ('GRID' == element.id and self.gridDepth > 0):
-            if (('GRID' == element.id or 'CLUSTER' == element.id) and (filterList is None or not len(filterList))) or ('GRID' == element.id and self.gridDepth > 0):
-                try:
+        if (
+            queryargs is not None or element.id == 'GRID' and self.gridDepth > 0
+        ) and (
+            element.id in ['GRID', 'CLUSTER']
+            and ((filterList is None or not len(filterList)))
+            or element.id == 'GRID'
+            and self.gridDepth > 0
+        ):
+            try:
                     # If the filter specifies that this is a summary rather than a regular XML dump, generate the 
                     #  summary XML.
-                    if (queryargs is not None and queryargs['filter'].lower().strip() == 'summary') or ('GRID' == element.id and self.gridDepth > 0):
+                if (
+                    (
+                        queryargs is not None
+                        and queryargs['filter'].lower().strip() == 'summary'
+                    )
+                    or element.id == 'GRID'
+                    and self.gridDepth > 0
+                ):
                         # A summary XML dump will contain a grid summary as well as each cluster summary.  Each will
                         #  be added during recusive calls to this method.
-                        if 'GRID' == element.id:
-                            rbuf += '>\n%s</GRID>\n' % self._getGridSummary(element, filterList, queryargs)
-                            self.gridDepth -= 1
-                            logging.info('Found </GRID> depth is now %d' %self.gridDepth)
-                            return rbuf
-                        elif 'CLUSTER' == element.id:
-                            if not skipTag:
-                                rbuf += '>\n%s</CLUSTER>\n' % self._getClusterSummary(element, filterList, queryargs)
-                            else:
-                                rbuf += '%s' % self._getClusterSummary(element, filterList, queryargs)
-                            return rbuf
-                except ValueError:
-                    pass
+                    if element.id == 'GRID':
+                        rbuf += '>\n%s</GRID>\n' % self._getGridSummary(element, filterList, queryargs)
+                        self.gridDepth -= 1
+                        logging.info('Found </GRID> depth is now %d' %self.gridDepth)
+                        return rbuf
+                    elif element.id == 'CLUSTER':
+                        rbuf += (
+                            f'{self._getClusterSummary(element, filterList, queryargs)}'
+                            if skipTag
+                            else '>\n%s</CLUSTER>\n'
+                            % self._getClusterSummary(
+                                element, filterList, queryargs
+                            )
+                        )
+
+                        return rbuf
+            except ValueError:
+                pass
         # If there aren't any children, then no reason to continue.
-        if 0 < len(element.children):
+        if len(element.children) > 0:
             if not skipTag:
                 # Close the last tag
                 rbuf += '>\n'
@@ -206,22 +226,19 @@ class XmlWriter:
                 # For each child, call this method recusively.  This will produce a complete dump of all children
                 for c in element.children.values():
                     rbuf += self._getXmlImpl(c, filterList, queryargs)
-            if 'GRID' == element.tag:
+            if element.tag == 'GRID':
                 self.gridDepth -= 1
                 logging.info('Found </GRID> depth is now: %d' %self.gridDepth)
             if not skipTag:
                 rbuf += '</%s>\n' % element.tag
-        else:
-            if not skipTag:
-                rbuf += ' />\n'
+        elif not skipTag:
+            rbuf += ' />\n'
         return rbuf
             
     def getXml(self, filter=None, queryargs=None):
         ''' This method generates the output XML for either the entire data store or 
             specified portions based on the filter and query args.'''
-        if filter is None:
-            filterList = None
-        elif not len(filter.strip()):
+        if filter is None or filter is not None and not len(filter.strip()):
             filterList = None
         else:
             filterList = filter.split('/')

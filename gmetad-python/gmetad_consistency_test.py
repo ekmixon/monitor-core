@@ -57,7 +57,7 @@ class GmetadElement:
     def __str__(self):
         buf = 'ID: %s\nAttrs:' % self.id
         for k, v in self._data.items():
-            buf += ' %s=>%s' % (k,v)
+            buf += f' {k}=>{v}'
         buf += '\n'
         for ce in self.child_elements:
             buf += str(ce)
@@ -115,9 +115,7 @@ def urlCompare(u1, u2):
         url2host_hostname, remnants = url2host.split('.',1)
     except ValueError:
         pass
-    if url1host_hostname != url2host_hostname:
-        return False
-    return True
+    return url1host_hostname == url2host_hostname
     
 ignore_attr_values = ['LOCALTIME', 'TN', 'REPORTED']
         
@@ -175,10 +173,10 @@ def get_socket(hspec):
 def get_xml_from_socket(sock):
     xmlbuf = ''
     while True:
-        buf = sock.recv(8192)
-        if not buf:
+        if buf := sock.recv(8192):
+            xmlbuf += buf
+        else:
             break
-        xmlbuf += buf
     return xmlbuf
     
 def compare_xml(oldXmlHandler, newXmlHandler):

@@ -121,7 +121,12 @@ def get_cache_hit_ratio(name):
     """Return cache hit ratio"""
 
     try:
-        result = get_delta(NAME_PREFIX + 'cache_hit') / get_delta(NAME_PREFIX + 'client_req') * 100
+        result = (
+            get_delta(f'{NAME_PREFIX}cache_hit')
+            / get_delta(f'{NAME_PREFIX}client_req')
+            * 100
+        )
+
     except ZeroDivisionError:
         result = 0
 

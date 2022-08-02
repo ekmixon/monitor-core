@@ -70,7 +70,7 @@ class GmetadNotifier(threading.Thread):
             #  plugins are processing the cluster data.
             transNode = _encode(node)
             self._transQueue.append( transNode)
-            logging.debug('Inserted transaction %s in to the queue' % str(node))
+            logging.debug(f'Inserted transaction {str(node)} in to the queue')
 
     def run(self):
         # Make sure that this thread is only run once.
@@ -86,7 +86,7 @@ class GmetadNotifier(threading.Thread):
             if len(self._transQueue) > 0:
                 transNode = self._transQueue.pop(0)
                 node = _decode(transNode)
-                logging.debug('Processing transaction %s' % str(node))
+                logging.debug(f'Processing transaction {str(node)}')
                 notify_plugins(node)
             self._cond.release()        
             

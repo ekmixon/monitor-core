@@ -46,14 +46,14 @@ def get_value(name):
     """Return a value for the requested metric"""
 
     # parse unit type and path from name
-    name_parser = re.match("^%s(absolute|percent)_(.*)$" % NAME_PREFIX, name)
-    unit_type = name_parser.group(1)
-    if name_parser.group(2) == 'rootfs':
+    name_parser = re.match(f"^{NAME_PREFIX}(absolute|percent)_(.*)$", name)
+    unit_type = name_parser[1]
+    if name_parser[2] == 'rootfs':
         path = '/'
-    elif name_parser.group(2) in PATHS:
-        path = '/' + PATHS[name_parser.group(2)]
+    elif name_parser[2] in PATHS:
+        path = f'/{PATHS[name_parser[2]]}'
     else:
-        path = '/' + name_parser.group(2).replace('_', '/')
+        path = '/' + name_parser[2].replace('_', '/')
 
     # get fs stats
     try:
@@ -63,10 +63,7 @@ def get_value(name):
         else:
             result = (disk.f_bavail * disk.f_frsize) / float(2**30)  # GB
 
-    except OSError:
-        result = 0
-
-    except ZeroDivisionError:
+    except (OSError, ZeroDivisionError):
         result = 0
 
     return result
@@ -88,12 +85,13 @@ def metric_init(lparams):
         f = []
 
     # Let's see if there are any mounts we need to add to the explicit list of mounts to check
-    explicit_mounts_to_check = list()
+    explicit_mounts_to_check = []
 
     if "explicit_mounts_to_check" in PARAMS and PARAMS['explicit_mounts_to_check'] != "":
         explicit_mounts_temp = PARAMS['explicit_mounts_to_check'].split(" ")
-        for mount in explicit_mounts_temp:
-            explicit_mounts_to_check.append( mount[1:].replace('/', '_') )
+        explicit_mounts_to_check.extend(
+            mount[1:].replace('/', '_') for mount in explicit_mounts_temp
+        )
 
         del explicit_mounts_temp
 
@@ -118,21 +116,21 @@ def metric_init(lparams):
             if (disk_size > float(PARAMS['min_disk_size']) and mount_info[1] != "/dev") or path_key in explicit_mounts_to_check:
                 PATHS[path_key] = mount_info[1]
                 for unit_type in ['absolute', 'percent']:
-                    if unit_type == 'percent':
-                        units = '%'
-                    else:
-                        units = 'GB'
-                    descriptors.append({
-                        'name': NAME_PREFIX + unit_type + '_' + path_key,
-                        'call_back': get_value,
-                        'time_max': 60,
-                        'value_type': 'float',
-                        'units': units,
-                        'slope': 'both',
-                        'format': '%f',
-                        'description': "Disk space available (%s) on %s" % (units, mount_info[1]),
-                        'groups': 'disk'
-                    })
+                    units = '%' if unit_type == 'percent' else 'GB'
+                    descriptors.append(
+                        {
+                            'name': NAME_PREFIX + unit_type + '_' + path_key,
+                            'call_back': get_value,
+                            'time_max': 60,
+                            'value_type': 'float',
+                            'units': units,
+                            'slope': 'both',
+                            'format': '%f',
+                            'description': f"Disk space available ({units}) on {mount_info[1]}",
+                            'groups': 'disk',
+                        }
+                    )
+
 
     return descriptors
 
@@ -152,4 +150,4 @@ if __name__ == '__main__':
     }
     descriptors = metric_init(PARAMS)
     for d in descriptors:
-        print (('%s = %s') % (d['name'], d['format'])) % (d['call_back'](d['name']))
+        print(f"{d['name']} = {d['format']}") % (d['call_back'](d['name']))

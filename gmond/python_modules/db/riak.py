@@ -28,7 +28,7 @@ import urllib2
 import traceback
 import json
 
-descriptors = list()
+descriptors = []
 Desc_Skel = {}
 _Worker_Thread = None
 _Lock = threading.Lock()  # synchronization lock
@@ -91,10 +91,7 @@ class UpdateMetricThread(threading.Thread):
             json_stats = json.loads(stats)
             for (key, value) in json_stats.iteritems():
                 dprint("%s = %s", key, value)
-                if value == 'undefined':
-                    self.metric[self.mp + '_' + key] = 0
-                else:
-                    self.metric[self.mp + '_' + key] = value
+                self.metric[f'{self.mp}_{key}'] = 0 if value == 'undefined' else value
         except urllib2.URLError:
             traceback.print_exc()
         else:

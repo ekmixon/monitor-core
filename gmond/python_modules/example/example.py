@@ -31,7 +31,7 @@
 #******************************************************************************/
 
 import random
-descriptors = list()
+descriptors = []
 Random_Max = 50
 Constant_Value = 50
 

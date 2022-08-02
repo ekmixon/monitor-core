@@ -36,26 +36,18 @@ import copy
 class Element:
     ''' This class implements the node element that is used to create the data store tree structure.'''
     
-    def generateKey(vals):
+    def generateKey(self):
         ''' This methods generates a node key based on the node id and name'''
-        if isinstance(vals,list):
-            return ':'.join(vals)
-        return vals
+        return ':'.join(self) if isinstance(self, list) else self
     generateKey = staticmethod(generateKey)
     
     def __init__(self, id, attrs, tag=None):
         ''' This is the initialization method '''
         # Initialize the id and tag for the node
         self.id = id
-        if tag is None:
-            self.tag = id
-        else:
-            self.tag = tag
-        # If any attributes where given during intialization, add them here.
-        self.attrs = {}
+        self.tag = id if tag is None else tag
         self.lastReportedTime = 0
-        for k,v in attrs.items():
-            self.attrs[k.lower()] = v
+        self.attrs = {k.lower(): v for k, v in attrs.items()}
         self.children = {}
         self.gridDepth = -1
         
@@ -117,9 +109,7 @@ class Element:
         return cp
         
     def getAttr(self, attr):
-        if self.attrs.has_key(attr.lower()):
-            return self.attrs[attr.lower()]
-        return None
+        return self.attrs[attr.lower()] if self.attrs.has_key(attr.lower()) else None
         
     def getAttrs(self):
         return self.attrs

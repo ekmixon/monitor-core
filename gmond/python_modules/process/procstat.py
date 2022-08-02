@@ -128,7 +128,7 @@ PROCESSES = {}
 
 def readCpu(pid):
     try:
-        stat = file('/proc/' + pid + '/stat', 'rt').readline().split()
+        stat = file(f'/proc/{pid}/stat', 'rt').readline().split()
         #logging.debug(' stat (' + pid + '): ' + str(stat))
         utime = int(stat[13])
         stime = int(stat[14])
@@ -136,27 +136,26 @@ def readCpu(pid):
         cstime = int(stat[16])
         return (utime + stime + cutime + cstime)
     except:
-        logging.warning('failed to get (' + str(pid) + ') stats')
+        logging.warning(f'failed to get ({str(pid)}) stats')
         return 0
 
 
 def get_pgid(proc):
-    logging.debug('getting pgid for process: ' + proc)
-    ERROR = 0
-
-    if pgid_list.has_key(proc) and os.path.exists('/proc/' + pgid_list[proc][0]):
+    logging.debug(f'getting pgid for process: {proc}')
+    if pgid_list.has_key(proc) and os.path.exists(
+        f'/proc/{pgid_list[proc][0]}'
+    ):
         return pgid_list[proc]
 
     val = PROCESSES[proc]
     # Is this a pidfile? Last 4 chars are .pid
     if '.pid' in val[-4:]:
-        if os.path.exists(val):
-            logging.debug(' pidfile found')
-            ppid = file(val, 'rt').readline().strip()
-            pgid = file('/proc/' + ppid + '/stat', 'rt').readline().split()[4]
-        else:
-            raise Exception('pidfile (' + val + ') does not exist')
+        if not os.path.exists(val):
+            raise Exception(f'pidfile ({val}) does not exist')
 
+        logging.debug(' pidfile found')
+        ppid = file(val, 'rt').readline().strip()
+        pgid = file(f'/proc/{ppid}/stat', 'rt').readline().split()[4]
     else:
         # This is a regex, lets search for it
         regex = PROCESSES[proc]
@@ -168,7 +167,7 @@ def get_pgid(proc):
             raise Exception('failed executing ps\n' + cmd + '\n' + err)
 
         result = out.strip().split('\n')
-        logging.debug(' result: ' + str(result))
+        logging.debug(f' result: {str(result)}')
 
         if len(result) > 1:
             raise Exception('more than 1 result returned\n' + cmd + '\n' + out.strip())
@@ -180,16 +179,16 @@ def get_pgid(proc):
         ppid = res[0]
         pgid = res[2]
 
-    if os.path.exists('/proc/' + ppid):
-        logging.debug(' ppid: ' + ppid + ' pgid: ' + pgid)
+    if os.path.exists(f'/proc/{ppid}'):
+        logging.debug(f' ppid: {ppid} pgid: {pgid}')
         return (ppid, pgid)
     else:
-        return ERROR
+        return 0
 
 
 def get_pgroup(ppid, pgid):
     '''Return a list of pids having the same pgid, with the first in the list being the parent pid.'''
-    logging.debug('getting pids for ppid/pgid: ' + ppid + '/' + pgid)
+    logging.debug(f'getting pids for ppid/pgid: {ppid}/{pgid}')
 
     # Get all processes in this group
     p_list = []
@@ -207,9 +206,9 @@ def get_pgroup(ppid, pgid):
         p_list.remove(ppid)
         p_list.insert(0, ppid)
     else:
-        logging.warning('failed to find ppid ' + str(ppid) + ' in p_list')
+        logging.warning(f'failed to find ppid {str(ppid)} in p_list')
 
-    logging.debug('p_list: ' + str(p_list))
+    logging.debug(f'p_list: {p_list}')
 
     if not len(p_list):
         logging.warning('failed getting pids')
@@ -223,11 +222,11 @@ def get_rss(pids):
     rss = 0
     for p in pids:
         try:
-            statm = open('/proc/' + p + '/statm', 'rt').readline().split()
-            #logging.debug(' statm (' + p + '): ' + str(statm))
+            statm = open(f'/proc/{p}/statm', 'rt').readline().split()
+                    #logging.debug(' statm (' + p + '): ' + str(statm))
         except:
             # Process finished, ignore this mem usage
-            logging.warning(' failed getting statm for pid: ' + p)
+            logging.warning(f' failed getting statm for pid: {p}')
             continue
 
         rss += int(statm[1])
@@ -335,30 +334,27 @@ def update_stats():
 
 
 def get_stat(name):
-    logging.debug('getting stat: ' + name)
+    logging.debug(f'getting stat: {name}')
 
-    ret = update_stats()
-
-    if ret:
-        if name.startswith('procstat_'):
-            nsp = name.split('_')
-            proc = '_'.join(nsp[1:-1])
-            label = nsp[-1]
-
-            try:
-                return stats[proc][label]
-            except:
-                logging.warning('failed to fetch [' + proc + '] ' + name)
-                return 0
-        else:
-            label = name
+    if not (ret := update_stats()):
+        return 0
+    if name.startswith('procstat_'):
+        nsp = name.split('_')
+        proc = '_'.join(nsp[1:-1])
+        label = nsp[-1]
 
         try:
-            return stats[label]
+            return stats[proc][label]
         except:
-            logging.warning('failed to fetch ' + name)
+            logging.warning(f'failed to fetch [{proc}] {name}')
             return 0
     else:
+        label = name
+
+    try:
+        return stats[label]
+    except:
+        logging.warning(f'failed to fetch {name}')
         return 0
 
 
@@ -366,7 +362,7 @@ def metric_init(params):
     global descriptors
     global PROCESSES
 
-    logging.debug('init: ' + str(params))
+    logging.debug(f'init: {str(params)}')
 
     PROCESSES = params
 
@@ -389,12 +385,12 @@ def metric_init(params):
     )
 
     time_max = 60
-    for label in descriptions:
+    for label, value in descriptions.items():
         for proc in PROCESSES:
             if stats[proc].has_key(label):
 
                 d = {
-                    'name': 'procstat_' + proc + '_' + label,
+                    'name': f'procstat_{proc}_{label}',
                     'call_back': get_stat,
                     'time_max': time_max,
                     'value_type': 'uint',
@@ -402,16 +398,17 @@ def metric_init(params):
                     'slope': 'both',
                     'format': '%u',
                     'description': label,
-                    'groups': 'procstat'
+                    'groups': 'procstat',
                 }
 
+
                 # Apply metric customizations from descriptions
-                d.update(descriptions[label])
+                d |= value
 
                 descriptors.append(d)
 
             else:
-                logging.error("skipped " + proc + '_' + label)
+                logging.error(f"skipped {proc}_{label}")
 
     #logging.debug('descriptors: ' + str(descriptors))
 

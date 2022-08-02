@@ -45,19 +45,16 @@ def get_metrics():
             metrics = {}
             for line in file:
                 if re.match("(.*): [0-9]", line):
-                    count = 0
                     metrics = re.split("\s+", line)
                     metric_group = metrics[0].replace(":", "").lower()
                     if metric_group not in stats_pos:
                         continue
-                    new_metrics[metric_group] = dict()
-                    for value in metrics:
+                    new_metrics[metric_group] = {}
+                    for count, value in enumerate(metrics):
                         # Skip first
                         if count > 0 and value >= 0 and count in stats_pos[metric_group]:
                             metric_name = stats_pos[metric_group][count]
                             new_metrics[metric_group][metric_name] = value
-                        count += 1
-
             file.close()
 
         # update cache
@@ -201,56 +198,76 @@ def metric_init(params):
         for line in file:
             # Lines with
             if not re.match("(.*): [0-9]", line):
-                count = 0
                 mapping = re.split("\s+", line)
                 metric_group = mapping[0].replace(":", "").lower()
-                stats_pos[metric_group] = dict()
-                for metric in mapping:
+                stats_pos[metric_group] = {}
+                for count, metric in enumerate(mapping):
                     # Skip first
                     if count > 0 and metric != "":
                         lowercase_metric = metric.lower()
                         stats_pos[metric_group][count] = lowercase_metric
-                    count += 1
-
         file.close()
 
     for group in stats_pos:
         for item in stats_pos[group]:
             if stats_pos[group][item] in ABSOLUTE_VALUES:
-                descriptors.append(create_desc(Desc_Skel, {
-                    "name"       : group + "_" + stats_pos[group][item],
-                    "call_back"  : get_value,
-                    "groups"     : group
-                }))
+                descriptors.append(
+                    create_desc(
+                        Desc_Skel,
+                        {
+                            "name": f"{group}_{stats_pos[group][item]}",
+                            "call_back": get_value,
+                            "groups": group,
+                        },
+                    )
+                )
+
             else:
-                descriptors.append(create_desc(Desc_Skel, {
-                    "name"       : group + "_" + stats_pos[group][item],
-                    "groups"     : group
-                }))
+                descriptors.append(
+                    create_desc(
+                        Desc_Skel,
+                        {
+                            "name": f"{group}_{stats_pos[group][item]}",
+                            "groups": group,
+                        },
+                    )
+                )
 
-    descriptors.append(create_desc(Desc_Skel, {
-        "name"       : "tcpext_tcploss_percentage",
-        "call_back"  : get_tcploss_percentage,
-        "description": "TCP percentage loss, tcploss / insegs + outsegs",
-        "units"      : "pct",
-        'groups'     : 'tcpext'
-    }))
 
-    descriptors.append(create_desc(Desc_Skel, {
-        "name"       : "tcp_attemptfails_percentage",
-        "call_back"  : get_tcpattemptfail_percentage,
-        "description": "TCP attemptfail percentage, tcpattemptfail / insegs + outsegs",
-        "units"      : "pct",
-        'groups'     : 'tcp'
-    }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-        "name"       : "tcp_retrans_percentage",
-        "call_back"  : get_retrans_percentage,
-        "description": "TCP retrans percentage, retranssegs / insegs + outsegs",
-        "units"      : "pct",
-        'groups'     : 'tcp'
-    }))
+    descriptors.extend(
+        (
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "tcpext_tcploss_percentage",
+                    "call_back": get_tcploss_percentage,
+                    "description": "TCP percentage loss, tcploss / insegs + outsegs",
+                    "units": "pct",
+                    'groups': 'tcpext',
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "tcp_attemptfails_percentage",
+                    "call_back": get_tcpattemptfail_percentage,
+                    "description": "TCP attemptfail percentage, tcpattemptfail / insegs + outsegs",
+                    "units": "pct",
+                    'groups': 'tcp',
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "tcp_retrans_percentage",
+                    "call_back": get_retrans_percentage,
+                    "description": "TCP retrans percentage, retranssegs / insegs + outsegs",
+                    "units": "pct",
+                    'groups': 'tcp',
+                },
+            ),
+        )
+    )
 
     return descriptors
 

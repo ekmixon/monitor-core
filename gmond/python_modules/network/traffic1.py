@@ -6,7 +6,7 @@ import os
 import threading
 import time
 
-descriptors = list()
+descriptors = []
 Desc_Skel = {}
 _Worker_Thread = None
 _Lock = threading.Lock()  # synchronization lock
@@ -77,7 +77,7 @@ class UpdateTrafficThread(threading.Thread):
             self.stats = {}
             _stats = a[1].split()
             for name, index in self.stats_tab.iteritems():
-                self.stats[name + '_' + self.target_device] = int(_stats[index])
+                self.stats[f'{name}_{self.target_device}'] = int(_stats[index])
             self.stats["time"] = time.time()
             dprint("%s", self.stats)
 
@@ -104,8 +104,9 @@ class UpdateTrafficThread(threading.Thread):
 def metric_init(params):
     global Desc_Skel, _Worker_Thread, Debug
 
-    print '[traffic1] Received the following parameters'
-    print params
+    global Desc_Skel, _Worker_Thread, Debug
+
+    global Desc_Skel, _Worker_Thread, Debug
 
     Desc_Skel = {
         'name'        : 'XXX',
@@ -135,37 +136,73 @@ def metric_init(params):
     if "spoof_host" in params:
         Desc_Skel["spoof_host"] = params["spoof_host"]
 
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"        : "recv_bytes_" + target_device,
-                "units"       : "bytes/sec",
-                "description" : "received bytes per sec",
-                }))
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"        : "recv_pkts_" + target_device,
-                "units"       : "pkts/sec",
-                "description" : "received packets per sec",
-                }))
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"        : "recv_errs_" + target_device,
-                "units"       : "pkts/sec",
-                "description" : "received error packets per sec",
-                }))
+    descriptors.append(
+        create_desc(
+            Desc_Skel,
+            {
+                "name": f"recv_bytes_{target_device}",
+                "units": "bytes/sec",
+                "description": "received bytes per sec",
+            },
+        )
+    )
 
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"        : "trans_bytes_" + target_device,
-                "units"       : "bytes/sec",
-                "description" : "transmitted bytes per sec",
-                }))
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"        : "trans_pkts_" + target_device,
-                "units"       : "pkts/sec",
-                "description" : "transmitted packets per sec",
-                }))
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"        : "trans_errs_" + target_device,
-                "units"       : "pkts/sec",
-                "description" : "transmitted error packets per sec",
-                }))
+    descriptors.append(
+        create_desc(
+            Desc_Skel,
+            {
+                "name": f"recv_pkts_{target_device}",
+                "units": "pkts/sec",
+                "description": "received packets per sec",
+            },
+        )
+    )
+
+    descriptors.append(
+        create_desc(
+            Desc_Skel,
+            {
+                "name": f"recv_errs_{target_device}",
+                "units": "pkts/sec",
+                "description": "received error packets per sec",
+            },
+        )
+    )
+
+
+    descriptors.append(
+        create_desc(
+            Desc_Skel,
+            {
+                "name": f"trans_bytes_{target_device}",
+                "units": "bytes/sec",
+                "description": "transmitted bytes per sec",
+            },
+        )
+    )
+
+    descriptors.append(
+        create_desc(
+            Desc_Skel,
+            {
+                "name": f"trans_pkts_{target_device}",
+                "units": "pkts/sec",
+                "description": "transmitted packets per sec",
+            },
+        )
+    )
+
+    descriptors.append(
+        create_desc(
+            Desc_Skel,
+            {
+                "name": f"trans_errs_{target_device}",
+                "units": "pkts/sec",
+                "description": "transmitted error packets per sec",
+            },
+        )
+    )
+
 
     return descriptors
 

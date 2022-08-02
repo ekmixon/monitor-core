@@ -157,106 +157,141 @@ def metric_init(params):
         'groups'      : 'cpu',
         }
 
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "cpu_ctxt",
-                "units"      : "ctxs/sec",
-                "description": "Context Switches",
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "procs_created",
-                "units"      : "proc/sec",
-                "description": "Number of processes and threads created",
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "cpu_intr",
-                "units"      : "intr/sec",
-                "description": "Interrupts serviced",
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "procs_blocked",
-                "units"      : "processes",
-                "call_back"   : get_value,
-                "description": "Processes blocked",
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "softirq",
-                "units"      : "ops/s",
-                "description": "Soft IRQs",
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "softirq_hi",
-                "units"      : "ops/s",
-                'groups'     : 'softirq',
-                "call_back"   : get_softirq_delta
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "softirq_timer",
-                "units"      : "ops/s",
-                'groups'     : 'softirq',
-                "call_back"   : get_softirq_delta
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "softirq_nettx",
-                "units"      : "ops/s",
-                'groups'     : 'softirq',
-                "call_back"   : get_softirq_delta
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "softirq_netrx",
-                "units"      : "ops/s",
-                'groups'     : 'softirq',
-                "call_back"   : get_softirq_delta
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "softirq_block",
-                "units"      : "ops/s",
-                'groups'     : 'softirq',
-                "call_back"   : get_softirq_delta
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "softirq_blockiopoll",
-                "units"      : "ops/s",
-                'groups'     : 'softirq',
-                "call_back"   : get_softirq_delta
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "softirq_tasklet",
-                "units"      : "ops/s",
-                'groups'     : 'softirq',
-                "call_back"   : get_softirq_delta
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "softirq_sched",
-                "units"      : "ops/s",
-                'groups'     : 'softirq',
-                "call_back"   : get_softirq_delta
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "softirq_hrtimer",
-                "units"      : "ops/s",
-                'groups'     : 'softirq',
-                "call_back"   : get_softirq_delta
-                }))
-
-    descriptors.append(create_desc(Desc_Skel, {
-                "name"       : "softirq_rcu",
-                "units"      : "ops/s",
-                'groups'     : 'softirq',
-                "call_back"   : get_softirq_delta
-                }))
+    descriptors.extend(
+        (
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "cpu_ctxt",
+                    "units": "ctxs/sec",
+                    "description": "Context Switches",
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "procs_created",
+                    "units": "proc/sec",
+                    "description": "Number of processes and threads created",
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "cpu_intr",
+                    "units": "intr/sec",
+                    "description": "Interrupts serviced",
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "procs_blocked",
+                    "units": "processes",
+                    "call_back": get_value,
+                    "description": "Processes blocked",
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "softirq",
+                    "units": "ops/s",
+                    "description": "Soft IRQs",
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "softirq_hi",
+                    "units": "ops/s",
+                    'groups': 'softirq',
+                    "call_back": get_softirq_delta,
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "softirq_timer",
+                    "units": "ops/s",
+                    'groups': 'softirq',
+                    "call_back": get_softirq_delta,
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "softirq_nettx",
+                    "units": "ops/s",
+                    'groups': 'softirq',
+                    "call_back": get_softirq_delta,
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "softirq_netrx",
+                    "units": "ops/s",
+                    'groups': 'softirq',
+                    "call_back": get_softirq_delta,
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "softirq_block",
+                    "units": "ops/s",
+                    'groups': 'softirq',
+                    "call_back": get_softirq_delta,
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "softirq_blockiopoll",
+                    "units": "ops/s",
+                    'groups': 'softirq',
+                    "call_back": get_softirq_delta,
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "softirq_tasklet",
+                    "units": "ops/s",
+                    'groups': 'softirq',
+                    "call_back": get_softirq_delta,
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "softirq_sched",
+                    "units": "ops/s",
+                    'groups': 'softirq',
+                    "call_back": get_softirq_delta,
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "softirq_hrtimer",
+                    "units": "ops/s",
+                    'groups': 'softirq',
+                    "call_back": get_softirq_delta,
+                },
+            ),
+            create_desc(
+                Desc_Skel,
+                {
+                    "name": "softirq_rcu",
+                    "units": "ops/s",
+                    'groups': 'softirq',
+                    "call_back": get_softirq_delta,
+                },
+            ),
+        )
+    )
 
     # We need a metric_map that maps metric_name to the index in /proc/meminfo
     metric_map = {}

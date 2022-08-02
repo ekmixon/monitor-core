@@ -88,21 +88,18 @@ class DataStore:
 
         # Clear out the summaryData from the last run and initialize
         #  the dictionary for new summaries.
-        gridNode.summaryData = {}
-        gridNode.summaryData['summary'] = {}
-        gridNode.summaryData['hosts_up'] = 0
-        gridNode.summaryData['hosts_down'] = 0
+        gridNode.summaryData = {'summary': {}, 'hosts_up': 0, 'hosts_down': 0}
         gridUp = (gridNode.getAttr('status') == 'up')
         summaryTime = int(time.time())
 
+        # Assume that cluster is up if we get a clusterNode object
+        clusterUp = True
         # Summarize over each host contained by the cluster
         for clusterNode in gridNode:
-            # Assume that cluster is up if we get a clusterNode object
-            clusterUp = True
             for hostNode in clusterNode:
                 reportedTime = summaryTime
                 # Sum up the status of all of the hosts
-                if 'HOST' == hostNode.id:
+                if hostNode.id == 'HOST':
                     # Calculate the difference between the last known reported time
                     #  and the current time.  This determines if the host is up or down
                     # ** There may still be some issues with the way that this calculation is done
@@ -114,7 +111,7 @@ class DataStore:
                     #  the current time.
                     if hostNode.lastReportedTime == reportedTime:
                         tn = summaryTime - reportedTime
-                        if tn < 0: tn = 0
+                        tn = max(tn, 0)
                         hostNode.setAttr('tn', str(tn))
                     else:
                         hostNode.lastReportedTime = reportedTime
@@ -124,9 +121,7 @@ class DataStore:
                             gridNode.summaryData['hosts_up'] += 1
                         else:
                             gridNode.summaryData['hosts_down'] += 1
-                    except AttributeError:
-                        pass
-                    except KeyError:
+                    except (AttributeError, KeyError):
                         pass
                 # Summarize over each metric within a host
                 for metricNode in hostNode:
@@ -137,7 +132,7 @@ class DataStore:
                     #  the current time.
                     if hostNode.lastReportedTime == reportedTime:
                         tn = summaryTime - reportedTime
-                        if tn < 0: tn = 0
+                        tn = max(tn, 0)
                         metricNode.setAttr('tn', str(tn))
 
                     # Don't include metrics that can not be summarized
@@ -171,18 +166,15 @@ class DataStore:
 
         # Clear out the summaryData from the last run and initialize
         #  the dictionary for new summaries.
-        clusterNode.summaryData = {}
-        clusterNode.summaryData['summary'] = {}
-        clusterNode.summaryData['hosts_up'] = 0
-        clusterNode.summaryData['hosts_down'] = 0
+        clusterNode.summaryData = {'summary': {}, 'hosts_up': 0, 'hosts_down': 0}
         clusterUp = (clusterNode.getAttr('status') == 'up')
         summaryTime = int(time.time())
-        
+
         # Summarize over each host contained by the cluster
         for hostNode in clusterNode:
             reportedTime = summaryTime
             # Sum up the status of all of the hosts
-            if 'HOST' == hostNode.id:
+            if hostNode.id == 'HOST':
                 # Calculate the difference between the last known reported time
                 #  and the current time.  This determines if the host is up or down
                 # ** There may still be some issues with the way that this calculation is done
@@ -194,32 +186,30 @@ class DataStore:
                 #  the current time.
                 if hostNode.lastReportedTime == reportedTime:
                     tn = summaryTime - reportedTime
-                    if tn < 0: tn = 0
+                    tn = max(tn, 0)
                     hostNode.setAttr('tn', str(tn))
                 else:
                     hostNode.lastReportedTime = reportedTime
-                    
+
                 try:
                     if clusterUp and (int(hostNode.getAttr('tn')) < int(hostNode.getAttr('tmax'))*4):
                         clusterNode.summaryData['hosts_up'] += 1
                     else:
                         clusterNode.summaryData['hosts_down'] += 1
-                except AttributeError:
-                    pass
-                except KeyError:
+                except (AttributeError, KeyError):
                     pass
             # Summarize over each metric within a host
             for metricNode in hostNode:
                 tn = int(metricNode.getAttr('tn'))
-                    
+
                 # If the last reported time is the same as the current reported time, then
                 #  the host has not been updated.  Therefore calculate the time offset from
                 #  the current time.
                 if metricNode.lastReportedTime == reportedTime:
                     tn = summaryTime - reportedTime
-                    if tn < 0: tn = 0
+                    tn = max(tn, 0)
                     metricNode.setAttr('tn', str(tn))
-                    
+
                 # Don't include metrics that can not be summarized
                 if metricNode.getAttr('type') in ['string', 'timestamp']:
                     continue
@@ -295,21 +285,21 @@ class DataStore:
             entire cluster and then the cluster transaction needs to be
             entered and passed to the plugins. '''
         if clusterNode is not None:
-            if 'CLUSTER' == clusterNode.id:
+            if clusterNode.id == 'CLUSTER':
                 self._doClusterSummary(clusterNode);
-            if 'GRID' == clusterNode.id:
+            if clusterNode.id == 'GRID':
                 self._doGridSummary(clusterNode)
             self.notifier.insertTransaction(clusterNode)
         
     def acquireLock(self, obj):
         ''' Acquire a data store lock. '''
         self.lock.acquire()
-        logging.debug('DataStore lock acquired %s'%str(obj))
+        logging.debug(f'DataStore lock acquired {str(obj)}')
 
     def releaseLock(self, obj):
         ''' Release the data store lock. ''' 
         self.lock.release()
-        logging.debug('DataStore lock released%s'%str(obj))
+        logging.debug(f'DataStore lock released{str(obj)}')
         
 class DataStoreGridSummary(threading.Thread):
     ''' This class implements the thread that periodically runs a summary over all of the clusters.

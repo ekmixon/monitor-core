@@ -25,18 +25,12 @@ def test_proc(p_file, p_string):
     Check if <p_file> contains keyword <p_string> e.g. proc3, proc4
     """
 
-    p_fd = open(p_file)
+    with open(p_file) as p_fd:
+        p_contents = p_fd.read()
 
-    p_contents = p_fd.read()
+    p_match = re.search(f".*{p_string}" + "\s.*", p_contents, flags=re.MULTILINE)
 
-    p_fd.close()
-
-    p_match = re.search(".*" + p_string + "\s.*", p_contents, flags=re.MULTILINE)
-
-    if not p_match:
-        return False
-    else:
-        return True
+    return bool(p_match)
 
 verboselevel = 0
 descriptors = []
@@ -252,14 +246,12 @@ def metric_init(params):
     global old_values
     global configtable
 
-    for i in range(0, len(configtable)):
+    for i in range(len(configtable)):
         #  Don't set up dictionary for any group member if group applicability tests fail.
         tests_passed = True
-        for j in range(0, len(configtable[i]['tests'])):
+        for j in range(len(configtable[i]['tests'])):
             try:
-                if eval(configtable[i]['tests'][j]):
-                    pass
-                else:
+                if not eval(configtable[i]['tests'][j]):
                     tests_passed = False
                     break
             except:
@@ -271,8 +263,6 @@ def metric_init(params):
         # 2nd param defines number of params that will follow (differs between NFS versions)
         max_plimit = re.split("\W+", p_match.group())[1]
 
-        # Parse our defined params list in order to ensure list will not exceed max_plimit
-        n = 0
         names_keys = configtable[i]['names'].keys()
         keys_to_remove = []
         for _tmpkey in names_keys:
@@ -280,9 +270,7 @@ def metric_init(params):
             param_pos = re.split("{(\d+)\}", configtable[i]['names'][_tmpkey].values()[0])[1]
             if int(param_pos) > int(max_plimit):
                 keys_to_remove.append(_tmpkey)
-            n += 1
-
-        if len(keys_to_remove) > 0:
+        if keys_to_remove:
             for key in keys_to_remove:
                 names_keys.remove(key)
 
@@ -359,13 +347,13 @@ def get_value(name):
     global descriptors
 
     #  Search descriptors array for this name's file and extractor RE
-    for i in range(0, len(descriptors)):
+    for i in range(len(descriptors)):
         if descriptors[i]['name'] == name:
             break
     contents = file(descriptors[i]['file']).read()
     m = re.search(descriptors[i]['re'], contents, flags=re.MULTILINE)
 
-    m_value = m.group(1)
+    m_value = m[1]
 
     #RB: multiple (space seperated) values: calculate sum
     if string.count(m_value, ' ') > 0:
@@ -399,4 +387,4 @@ if __name__ == '__main__':
     time.sleep(5)
     for d in descriptors:
         v = d['call_back'](d['name'])
-        debug(10, ('__main__: value for %s is %s' % (d['name'], d['format'])) % (v))
+        debug(10, f"__main__: value for {d['name']} is {d['format']}" % v)

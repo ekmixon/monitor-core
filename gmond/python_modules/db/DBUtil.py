@@ -47,10 +47,7 @@ except:
             self[key] = value = self.default_factory()
             return value
         def __reduce__(self):
-            if self.default_factory is None:
-                args = tuple()
-            else:
-                args = self.default_factory,
+            args = tuple() if self.default_factory is None else (self.default_factory, )
             return type(self), args, None, None, self.items()
         def copy(self):
             return self.__copy__()
@@ -61,8 +58,7 @@ except:
             return type(self)(self.default_factory,
                               copy.deepcopy(self.items()))
         def __repr__(self):
-            return 'defaultdict(%s, %s)' % (self.default_factory,
-                                            dict.__repr__(self))
+            return f'defaultdict({self.default_factory}, {dict.__repr__(self)})'
 
 import MySQLdb
 
@@ -75,28 +71,23 @@ def is_hex(s):
 
 
 def longish(x):
-        if len(x):
-                try:
-                        return long(x)
-                except ValueError:
-                        if(x.endswith(',')):
-                           return longish(x[:-1])
-                        if(is_hex(x.lower()) == True):
-                           return hexlongish(x)
-                        #print "X==(%s)(%s)(%s)" %(x, x[:-1],hexlongish(x)), sys.exc_info()[0]
-                        return longish(x[:-1])
-        else:
-                raise ValueError
+    if not len(x):
+        raise ValueError
+    try:
+        return long(x)
+    except ValueError:
+        if(x.endswith(',')):
+           return longish(x[:-1])
+        return hexlongish(x) if (is_hex(x.lower()) == True) else longish(x[:-1])
 
 
 def hexlongish(x):
-        if len(x):
-                try:
-                        return long(str(x), 16)
-                except ValueError:
-                        return longish(x[:-1])
-        else:
-                raise ValueError
+    if not len(x):
+        raise ValueError
+    try:
+            return long(str(x), 16)
+    except ValueError:
+            return longish(x[:-1])
 
 def parse_innodb_status(innodb_status_raw, innodb_version="1.0"):
         def sumof(status):

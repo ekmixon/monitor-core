@@ -105,7 +105,7 @@ def build_dmblock_major_minor_tables():
 
     mapper_entries = os.listdir(DMDIR)
     for n in mapper_entries:
-        s = os.lstat(DMDIR + '/' + n)
+        s = os.lstat(f'{DMDIR}/{n}')
         if stat.S_ISBLK(s[stat.ST_MODE]):
             names.append(n)
             maj = str(os.major(s.st_rdev))
@@ -114,7 +114,7 @@ def build_dmblock_major_minor_tables():
             pair2name[(maj, min)] = n
 
     logging.debug('grabbed dmsetup device info')
-    logging.debug('dmsetup devices: ' + str(name2pair))
+    logging.debug(f'dmsetup devices: {name2pair}')
 
     return (names, name2pair, pair2name)
 
@@ -148,8 +148,7 @@ def get_devname(dev):
     """Returns device mapper name converted to dev name"""
 
     (maj, min) = dm2pair[dev]
-    name = pair2dev[(maj, min)]
-    return name
+    return pair2dev[(maj, min)]
 
 
 def list_dmnames():
@@ -164,15 +163,15 @@ def list_dmnames():
     devlist = ''
 
     dmnames, dm2pair, pair2dm = build_dmblock_major_minor_tables()
-    logging.debug('dmnames: ' + str(dmnames))
+    logging.debug(f'dmnames: {str(dmnames)}')
 
     devnames, dev2pair, pair2dev = build_block_major_minor_tables()
-    logging.debug('devnames: ' + str(dmnames))
+    logging.debug(f'devnames: {str(dmnames)}')
 
     for d in dmnames:
-        devlist = devlist + ' ' + str(d)
+        devlist = f'{devlist} {str(d)}'
 
-    logging.debug('devlist: ' + str(devlist))
+    logging.debug(f'devlist: {str(devlist)}')
 
     return devlist
 
@@ -201,7 +200,7 @@ def get_partitions():
                 # only include md devices and base block devices
                 devices.append(device_name)
         out = ' '.join(devices)
-        logging.debug('  result: ' + out)
+        logging.debug(f'  result: {out}')
 
     for dev in out.split():
         if DEVICES is not None:
@@ -209,13 +208,13 @@ def get_partitions():
             PARTITIONS.append(dev)
         else:
             # Load disk block size
-            c = open('/sys/block/' + dev + '/size', 'r').read(256)
+            c = open(f'/sys/block/{dev}/size', 'r').read(256)
 
             # Make sure device is large enough to collect stats
             if (int(c) * BYTES_PER_SECTOR / 1024) > MIN_DISK_SIZE:
                 PARTITIONS.append(dev)
             else:
-                logging.debug(' ignoring ' + dev + ' due to size constraints')
+                logging.debug(f' ignoring {dev} due to size constraints')
 
     return 0
 
@@ -254,15 +253,17 @@ def update_stats():
     cur_time = time.time()
 
     if cur_time - last_update < MAX_UPDATE_TIME:
-        logging.debug(' wait ' + str(int(MAX_UPDATE_TIME - (cur_time - last_update))) + ' seconds')
+        logging.debug(
+            f' wait {int(MAX_UPDATE_TIME - (cur_time - last_update))} seconds'
+        )
+
         return True
 
     # Update diskstats
     stats = {}
 
     if not PARTITIONS:
-        part = get_partitions()
-        if part:
+        if part := get_partitions():
             # Fail if return is non-zero
             logging.warning('error getting partitions')
             return False
@@ -270,7 +271,7 @@ def update_stats():
     # Get values for each disk device
     for dev in PARTITIONS:
         dev = dev.replace('/', '-')
-        logging.debug(" dev: " + dev)
+        logging.debug(f" dev: {dev}")
 
         # Setup storage lists
         if dev not in stats:
@@ -289,7 +290,7 @@ def update_stats():
             if dev in line.split():
                 vals = line.split()
 
-        logging.debug('  vals: ' + str(vals))
+        logging.debug(f'  vals: {str(vals)}')
 
         # Reset back to orignal dev name
         if device_mapper == 'true':
@@ -312,15 +313,15 @@ def update_stats():
         get_delta(dev, 'weighted_io_time', float(vals[13]), 0.001)
 
     logging.debug('success refreshing stats')
-    logging.debug('stats: ' + str(stats))
-    logging.debug('last_val: ' + str(last_val))
+    logging.debug(f'stats: {stats}')
+    logging.debug(f'last_val: {str(last_val)}')
 
     last_update = cur_time
     return True
 
 
 def get_delta(dev, key, val, convert=1):
-    logging.debug(' get_delta for ' + dev + '_' + key)
+    logging.debug(f' get_delta for {dev}_{key}')
     global stats, last_val
 
     if convert == 0:
@@ -342,19 +343,16 @@ def get_delta(dev, key, val, convert=1):
 
 
 def get_percent_time(dev, key, val):
-    logging.debug(' get_percent_time for ' + dev + '_' + key)
+    logging.debug(f' get_percent_time for {dev}_{key}')
     global stats, last_val
 
     interval = cur_time - last_update
 
-    if interval > 0:
-        stats[dev][key] = (val / interval) * 100
-    else:
-        stats[dev][key] = 0
+    stats[dev][key] = (val / interval) * 100 if interval > 0 else 0
 
 
 def get_diff(dev, key, val, convert=1):
-    logging.debug(' get_diff for ' + dev + '_' + key)
+    logging.debug(f' get_diff for {dev}_{key}')
     global stats, last_val
 
     if key in last_val[dev]:
@@ -364,42 +362,36 @@ def get_diff(dev, key, val, convert=1):
 
         # If for some reason we have a negative diff we should assume counters reset
         # and should set it back to 0
-    if stats[dev][key] < 0:
-        stats[dev][key] = 0
-
+    stats[dev][key] = max(stats[dev][key], 0)
     last_val[dev][key] = val
 
 
 def get_stat(name):
-    logging.debug(' getting stat: ' + name)
+    logging.debug(f' getting stat: {name}')
     global stats
 
-    ret = update_stats()
-
-    if ret:
-        if name.startswith('diskstat_'):
-            fir = name.find('_')
-            sec = name.find('_', fir + 1)
-
-            dev = name[fir + 1:sec]
-            label = name[sec + 1:]
-
-            try:
-                return stats[dev][label]
-            except:
-                logging.warning('failed to fetch [' + dev + '] ' + name)
-                return 0
-        else:
-            label = name
-
-            try:
-                return stats[label]
-            except:
-                logging.warning('failed to fetch ' + name)
-                return 0
-
-    else:
+    if not (ret := update_stats()):
         return 0
+    if name.startswith('diskstat_'):
+        fir = name.find('_')
+        sec = name.find('_', fir + 1)
+
+        dev = name[fir + 1:sec]
+        label = name[sec + 1:]
+
+        try:
+            return stats[dev][label]
+        except:
+            logging.warning(f'failed to fetch [{dev}] {name}')
+            return 0
+    else:
+        label = name
+
+        try:
+            return stats[label]
+        except:
+            logging.warning(f'failed to fetch {name}')
+            return 0
 
 
 def metric_init(params):
@@ -412,11 +404,11 @@ def metric_init(params):
         DEVICES = devices
         IGNORE_DEV = 'loop|drbd'
         device_mapper = 'true'
-        logging.debug('dm block devices: ' + str(devices))
+        logging.debug(f'dm block devices: {str(devices)}')
     else:
         DEVICES = params.get('devices')
 
-    logging.debug('init: ' + str(params))
+    logging.debug(f'init: {str(params)}')
 
     time_max = 60
 
@@ -470,12 +462,12 @@ def metric_init(params):
 
     update_stats()
 
-    for label in descriptions:
+    for label, value in descriptions.items():
         for dev in PARTITIONS:
             if label in stats[dev]:
 
                 d = {
-                    'name': 'diskstat_' + dev + '_' + label,
+                    'name': f'diskstat_{dev}_{label}',
                     'call_back': get_stat,
                     'time_max': time_max,
                     'value_type': 'float',
@@ -483,15 +475,16 @@ def metric_init(params):
                     'slope': 'both',
                     'format': '%f',
                     'description': label,
-                    'groups': 'diskstat'
+                    'groups': 'diskstat',
                 }
 
+
                 # Apply metric customizations from descriptions
-                d.update(descriptions[label])
+                d |= value
 
                 descriptors.append(d)
             else:
-                logging.error("skipped " + label)
+                logging.error(f"skipped {label}")
 
     # For command line testing
     # time.sleep(MAX_UPDATE_TIME)
